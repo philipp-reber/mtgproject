@@ -12,23 +12,28 @@ Start the MongoDB container:
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Import the raw JSON data into MongoDB (This will take 2-3 minutes):
-``` bash
-docker run --rm \
-  --network host \
-  -v "$(pwd)/data/raw:/import:ro" \
-  mongo:7 \
-  mongoimport \
-    --uri="mongodb://root:rootpassword@localhost:27017/raw_scryfall?authSource=admin" \
-    --collection=cards \
-    --file=/import/scryfall_all_cards.json \
-    --jsonArray
-```
-
 Connect to the running MongoDB Container:
 ``` bash
 docker exec -it raw-mongo mongosh -u root -p rootpassword --authenticationDatabase admin
 ```
+
+Make sure you use the correct db:
+``` bash
+use raw_scryfall
+```
+
+If there is no data in the db yet, use the following command from outside the container to import the data into the database:
+``` bash
+docker exec -it raw-mongo mongoimport \
+  --username root \
+  --password rootpassword \
+  --authenticationDatabase admin \
+  --db raw_scryfall \
+  --collection cards \
+  --file /import/scryfall_all_cards.json \
+  --jsonArray
+```
+
 
 ## 3. Looking at a card with db.cards.findOne() yields this result:
 

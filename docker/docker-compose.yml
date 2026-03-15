@@ -12,6 +12,7 @@ services:
     command: ["mongod", "--wiredTigerCacheSizeGB", "1"]
     volumes:
       - mongo_data:/data/db
+      - ../data/raw:/import:ro
 
 volumes:
   mongo_data:
