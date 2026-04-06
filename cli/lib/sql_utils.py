@@ -1,1 +1,0 @@
-# Utility Functions to query the SQL Data

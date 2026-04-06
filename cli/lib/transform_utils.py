@@ -1,1 +1,0 @@
-# Utility Functions to transform the Data from the raw MongoDB to the SQL BDV
