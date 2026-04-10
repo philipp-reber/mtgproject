@@ -1,4 +1,5 @@
 /data
 /venv
 /cli/lib/__pychache__
-.env
+
+*.env
