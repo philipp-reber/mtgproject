@@ -1,8 +1,9 @@
 import argparse
 
 from lib.extract import check_status, download_data
-from lib.mongo import populate_raw_db
+from lib.mongo import populate_raw_db, get_random_card
 from lib.pipeline import start_docker_containers
+from lib.transform import transform_card
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Magic Data and Pricing CLI")
@@ -12,6 +13,7 @@ def main() -> None:
     subparsers.add_parser("downloaddata", help="Download the raw bulk data")
     subparsers.add_parser("startdocker", help="Start the Docker containers for this project")
     subparsers.add_parser("populateraw", help="Populate the raw MongoDB container with data")
+    subparsers.add_parser("transformcard", help="Transform a random card and print the output dictionary for testing")
 
     args = parser.parse_args()
 
@@ -24,6 +26,9 @@ def main() -> None:
             start_docker_containers()
         case "populateraw":
             populate_raw_db()
+        case "transformcard":
+            rnd_card = get_random_card()
+            print(transform_card(rnd_card))
         case _:
             parser.print_help()
 

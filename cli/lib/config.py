@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations # to make sure the decorator works as intended
 
 import os
 from dataclasses import dataclass # decoartor to simplify writing classes which store structured data

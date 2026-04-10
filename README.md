@@ -1,155 +1,31 @@
 # MTG DataEngineering and price prediction project
 
-## 1. Bulk Data Download for Raw Data to the data/raw/ directory
-``` bash
-curl -X GET https://data.scryfall.io/all-cards/all-cards-20260228222541.json -o data/raw/scryfall_all_cards.json
-```
-You only need to do this once to have the raw data in your directory
+## 1. Set-Up
 
-## 2. Set Up of Docker Container for MongoDB
-Start the MongoDB container:
-``` bash
-docker compose -f docker/docker-compose.yml up -d
-```
+The Project includes a client for executing all necessary commands.
 
-Connect to the running MongoDB Container:
-``` bash
-docker exec -it raw-mongo mongosh -u root -p rootpassword --authenticationDatabase admin
-```
+Install all the requirements from requirements.txt
 
-Make sure you use the correct db:
-``` bash
-use raw_scryfall
-```
+Please create a .env file filling out the following information:
 
-If there is no data in the db yet, use the following command from outside the container to import the data into the database:
-``` bash
-docker exec -it raw-mongo mongoimport \
-  --username root \
-  --password rootpassword \
-  --authenticationDatabase admin \
-  --db raw_scryfall \
-  --collection cards \
-  --file /import/scryfall_all_cards.json \
-  --jsonArray
-```
+MONGO_HOST=
+MONGO_PORT=
+MONGO_USERNAME=
+MONGO_PASSWORD=
+MONGO_AUTH_SOURCE=
+MONGO_DATABASE=
+MONGO_COLLECTION=
+MONGO_CONTAINER_NAME=
+MONGO_IMPORT_MOUNT_PATH=
 
+POSTGRES_HOST=
+POSTGRES_PORT=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
+POSTGRES_CONTAINER_NAME=
 
-## 3. Looking at a card with db.cards.findOne() yields this result:
+PIPELINE_BATCH_SIZE=
+SCRYFALL_BULK_DATA_URL=https://api.scryfall.com/bulk-data
 
-``` javascript
-{
-  _id: ObjectId('69a417bd6c4b024fe19f72d8'),
-  object: 'card',
-  id: '0000579f-7b35-4ed3-b44c-db2a538066fe',
-  oracle_id: '44623693-51d6-49ad-8cd7-140505caf02f',
-  multiverse_ids: [ 109722 ],
-  mtgo_id: 25527,
-  mtgo_foil_id: 25528,
-  tcgplayer_id: 14240,
-  cardmarket_id: 13850,
-  name: 'Fury Sliver',
-  lang: 'en',
-  released_at: '2006-10-06',
-  uri: 'https://api.scryfall.com/cards/0000579f-7b35-4ed3-b44c-db2a538066fe',
-  scryfall_uri: 'https://scryfall.com/card/tsp/157/fury-sliver?utm_source=api',
-  layout: 'normal',
-  highres_image: true,
-  image_status: 'highres_scan',
-  image_uris: {
-    small: 'https://cards.scryfall.io/small/front/0/0/0000579f-7b35-4ed3-b44c-db2a538066fe.jpg?1562894979',
-    normal: 'https://cards.scryfall.io/normal/front/0/0/0000579f-7b35-4ed3-b44c-db2a538066fe.jpg?1562894979',
-    large: 'https://cards.scryfall.io/large/front/0/0/0000579f-7b35-4ed3-b44c-db2a538066fe.jpg?1562894979',
-    png: 'https://cards.scryfall.io/png/front/0/0/0000579f-7b35-4ed3-b44c-db2a538066fe.png?1562894979',
-    art_crop: 'https://cards.scryfall.io/art_crop/front/0/0/0000579f-7b35-4ed3-b44c-db2a538066fe.jpg?1562894979',
-    border_crop: 'https://cards.scryfall.io/border_crop/front/0/0/0000579f-7b35-4ed3-b44c-db2a538066fe.jpg?1562894979'
-  },
-  mana_cost: '{5}{R}',
-  cmc: 6,
-  type_line: 'Creature — Sliver',
-  oracle_text: 'All Sliver creatures have double strike.',
-  power: '3',
-  toughness: '3',
-  colors: [ 'R' ],
-  color_identity: [ 'R' ],
-  keywords: [],
-  legalities: {
-    standard: 'not_legal',
-    future: 'not_legal',
-    historic: 'not_legal',
-    timeless: 'not_legal',
-    gladiator: 'not_legal',
-    pioneer: 'not_legal',
-    modern: 'legal',
-    legacy: 'legal',
-    pauper: 'not_legal',
-    vintage: 'legal',
-    penny: 'not_legal',
-    commander: 'legal',
-    oathbreaker: 'legal',
-    standardbrawl: 'not_legal',
-    brawl: 'not_legal',
-    alchemy: 'not_legal',
-    paupercommander: 'not_legal',
-    duel: 'legal',
-    oldschool: 'not_legal',
-    premodern: 'not_legal',
-    predh: 'legal'
-  },
-  games: [ 'paper', 'mtgo' ],
-  reserved: false,
-  game_changer: false,
-  foil: true,
-  nonfoil: true,
-  finishes: [ 'nonfoil', 'foil' ],
-  oversized: false,
-  promo: false,
-  reprint: false,
-  variation: false,
-  set_id: 'c1d109bc-ffd8-428f-8d7d-3f8d7e648046',
-  set: 'tsp',
-  set_name: 'Time Spiral',
-  set_type: 'expansion',
-  set_uri: 'https://api.scryfall.com/sets/c1d109bc-ffd8-428f-8d7d-3f8d7e648046',
-  set_search_uri: 'https://api.scryfall.com/cards/search?order=set&q=e%3Atsp&unique=prints',
-  scryfall_set_uri: 'https://scryfall.com/sets/tsp?utm_source=api',
-  rulings_uri: 'https://api.scryfall.com/cards/0000579f-7b35-4ed3-b44c-db2a538066fe/rulings',
-  prints_search_uri: 'https://api.scryfall.com/cards/search?order=released&q=oracleid%3A44623693-51d6-49ad-8cd7-140505caf02f&unique=prints',
-  collector_number: '157',
-  digital: false,
-  rarity: 'uncommon',
-  flavor_text: `"A rift opened, and our arrows were abruptly stilled. To move was to push the world. But the sliver's claw still twitched, red wounds appeared in Thed's chest, and ribbons of blood hung in the air."\n` +
-    '—Adom Capashen, Benalish hero',
-  card_back_id: '0aeebaf5-8c7d-4636-9e82-8c27447861f7',
-  artist: 'Paolo Parente',
-  artist_ids: [ 'd48dd097-720d-476a-8722-6a02854ae28b' ],
-  illustration_id: '2fcca987-364c-4738-a75b-099d8a26d614',
-  border_color: 'black',
-  frame: '2003',
-  full_art: false,
-  textless: false,
-  booster: true,
-  story_spotlight: false,
-  edhrec_rank: 9872,
-  penny_rank: 11822,
-  prices: {
-    usd: '0.56',
-    usd_foil: '3.79',
-    usd_etched: null,
-    eur: '0.21',
-    eur_foil: '1.45',
-    tix: '0.03'
-  },
-  related_uris: {
-    gatherer: 'https://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=109722&printed=false',
-    tcgplayer_infinite_articles: 'https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DFury%2BSliver',
-    tcgplayer_infinite_decks: 'https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DFury%2BSliver',
-    edhrec: 'https://edhrec.com/route/?cc=Fury+Sliver'
-  },
-  purchase_uris: {
-    tcgplayer: 'https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F14240%3Fpage%3D1',
-    cardmarket: 'https://www.cardmarket.com/en/Magic/Products?idProduct=13850&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall',
-    cardhoarder: 'https://www.cardhoarder.com/cards/25527?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall'
-  }
-}
-```
+Run the command "checkstatus" and the consecutive commands suggested to start up the infrastructure. Afterwards you can use the other commands.

@@ -1,4 +1,5 @@
 import subprocess
+from pymongo import MongoClient
 
 from .config import mongo, paths
 
@@ -42,3 +43,22 @@ def populate_raw_db() -> None:
 
     except FileNotFoundError:
         print("Docker is not installed or not available in PATH.")
+
+def get_random_card() -> dict:
+    client = MongoClient(
+        host=mongo.host,
+        port=mongo.port,
+        username=mongo.username,
+        password=mongo.password,
+        authSource=mongo.auth_source,
+        serverSelectionTimeoutMS=mongo.server_selection_timeout_ms,
+    )
+    db = client[mongo.database]
+    result = list(db[mongo.collection].aggregate([
+        {"$sample": {"size": 1}}
+    ]))
+
+    if not result:
+        raise ValueError("No documents found in collection")
+
+    return result[0]
