@@ -26,6 +26,29 @@ def transform_card(raw_card: dict) -> dict:
     if price_foil:
         price_rows.append({"finish": "foil", "price_eur": price_foil})
 
+    # Face logic and layout dimension
+
+    layout = {
+        "layout": raw_card.get("layout")
+    }
+
+    card_faces = {
+        "card_faces": []
+    }
+
+    if layout["layout"] in ["split", "flip", "transform", "double_faced_token"]:
+        for face in raw_card.get("card_faces", {}):
+            card_face = {
+                "face_name": face.get("name"),
+                "face_mana_cost": face.get("mana_cost"),
+                "face_type_line": face.get("type_line"),
+                "face_oracle_text": face.get("oracle_text"),
+                "face_power": face.get("power"),
+                "face_toughness": face.get("toughness"),
+                "face_loyalty": face.get("loyalty")
+            }
+            card_faces["card_faces"].append(card_face)
+
     # Dimensions
     type_line = {
         "type_line": raw_card.get("type_line")
@@ -47,6 +70,9 @@ def transform_card(raw_card: dict) -> dict:
     }
     toughness = {
         "toughness": raw_card.get("toughness")
+    },
+    loyalty = {
+        "loyalty": raw_card.get("loyalty")
     }
     set_dim = {
         "set": raw_card.get("set"),
@@ -78,6 +104,7 @@ def transform_card(raw_card: dict) -> dict:
             "legality":legality
         })
 
+    # Returned structure
     return {
         "card": card,
         "price_rows": price_rows,
@@ -89,11 +116,13 @@ def transform_card(raw_card: dict) -> dict:
             "oracle_text": oracle_text,
             "power": power,
             "toughness": toughness,
+            "loyalty": loyalty,
             "set": set_dim,
             "rarity": rarity,
             "card_back_id": card_back_id,
             "border_color": border_color,
-            "frame":frame
+            "frame":frame,
+            "layout": layout
             },
         "bridges": {
             "colors": raw_card.get("colors") or [],
@@ -101,7 +130,10 @@ def transform_card(raw_card: dict) -> dict:
             "keywords":raw_card.get("keywords") or [],
             "games":raw_card.get("games") or [],
             "artists": artists
-            }
+            },
+        "card_faces": {
+            "card_faces": card_faces
+        }
     }
 
 def transform_core_card(raw_card: dict) -> dict:

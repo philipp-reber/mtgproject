@@ -1,7 +1,7 @@
 import argparse
 
 from lib.extract import check_status, download_data
-from lib.mongo import populate_raw_db, get_random_card
+from lib.mongo import populate_raw_db, get_random_card, get_card_by_name
 from lib.pipeline import start_docker_containers
 from lib.transform import transform_card
 
@@ -13,7 +13,8 @@ def main() -> None:
     subparsers.add_parser("downloaddata", help="Download the raw bulk data")
     subparsers.add_parser("startdocker", help="Start the Docker containers for this project")
     subparsers.add_parser("populateraw", help="Populate the raw MongoDB container with data")
-    subparsers.add_parser("transformcard", help="Transform a random card and print the output dictionary for testing")
+    tarnsform_parser = subparsers.add_parser("transformcard", help="Transform a random card and print the output dictionary for testing")
+    tarnsform_parser.add_argument("cardname", type=str, nargs="?", default="", help="Cardname to transform")
 
     args = parser.parse_args()
 
@@ -27,8 +28,11 @@ def main() -> None:
         case "populateraw":
             populate_raw_db()
         case "transformcard":
-            rnd_card = get_random_card()
-            print(transform_card(rnd_card))
+            if args.cardname:
+                card = get_card_by_name(args.cardname)
+            else:
+                card = get_random_card()
+            print(transform_card(card))
         case _:
             parser.print_help()
 

@@ -62,3 +62,21 @@ def get_random_card() -> dict:
         raise ValueError("No documents found in collection")
 
     return result[0]
+
+def get_card_by_name(card_name:str) -> dict:
+    client = MongoClient(
+        host=mongo.host,
+        port=mongo.port,
+        username=mongo.username,
+        password=mongo.password,
+        authSource=mongo.auth_source,
+        serverSelectionTimeoutMS=mongo.server_selection_timeout_ms,
+    )
+    db = client[mongo.database]
+    collection = db[mongo.collection]
+    result = collection.find_one({"name": card_name})
+    
+    if not result:
+        raise ValueError(f"No card found with name: {card_name}")
+
+    return result
