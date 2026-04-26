@@ -3,7 +3,7 @@
 
 def transform_card(raw_card: dict) -> dict:
     """Takes a raw MongoDB card document and returns a structured dictionary for SQL loading."""
-    # Fact Tables
+    # Fact Table
     card = {
         "card_id": raw_card.get("id"),
         "card_name": raw_card.get("name"),
@@ -16,38 +16,6 @@ def transform_card(raw_card: dict) -> dict:
         "full_art":raw_card.get("full_art"),
         "textless":raw_card.get("textless")
     }
-
-    price_rows = []
-    prices = raw_card.get("prices")
-    price_nonfoil = prices.get("eur") if prices else None
-    price_foil = prices.get("eur_foil") if prices else None
-    if price_nonfoil:
-        price_rows.append({"finish": "nonfoil", "price_eur": price_nonfoil})
-    if price_foil:
-        price_rows.append({"finish": "foil", "price_eur": price_foil})
-
-    # Face logic and layout dimension
-
-    layout = {
-        "layout": raw_card.get("layout")
-    }
-
-    card_faces = {
-        "card_faces": []
-    }
-
-    if layout["layout"] in ["split", "flip", "transform", "double_faced_token"]:
-        for face in raw_card.get("card_faces", {}):
-            card_face = {
-                "face_name": face.get("name"),
-                "face_mana_cost": face.get("mana_cost"),
-                "face_type_line": face.get("type_line"),
-                "face_oracle_text": face.get("oracle_text"),
-                "face_power": face.get("power"),
-                "face_toughness": face.get("toughness"),
-                "face_loyalty": face.get("loyalty")
-            }
-            card_faces["card_faces"].append(card_face)
 
     # Dimensions
     type_line = {
@@ -70,7 +38,8 @@ def transform_card(raw_card: dict) -> dict:
     }
     toughness = {
         "toughness": raw_card.get("toughness")
-    },
+    }
+    
     loyalty = {
         "loyalty": raw_card.get("loyalty")
     }
@@ -82,14 +51,15 @@ def transform_card(raw_card: dict) -> dict:
     rarity = {
         "rarity": raw_card.get("rarity")
     }
-    card_back_id = {
-        "card_back_id":raw_card.get("card_back_id")
-    }
     border_color = {
         "border_color":raw_card.get("border_color")
     }
     frame = {
         "frame":raw_card.get("frame")
+    }
+
+    layout = {
+        "layout": raw_card.get("layout")
     }
 
     # bridges
@@ -104,10 +74,35 @@ def transform_card(raw_card: dict) -> dict:
             "legality":legality
         })
 
+    card_faces = {
+        "card_faces": []
+    }
+
+    if layout["layout"] in ["split", "flip", "transform", "double_faced_token"]:
+        for face in raw_card.get("card_faces", {}):
+            card_face = {
+                "face_name": face.get("name"),
+                "face_mana_cost": face.get("mana_cost"),
+                "face_type_line": face.get("type_line"),
+                "face_oracle_text": face.get("oracle_text"),
+                "face_power": face.get("power"),
+                "face_toughness": face.get("toughness"),
+                "face_loyalty": face.get("loyalty")
+            }
+            card_faces["card_faces"].append(card_face)
+
+    price_rows = []
+    prices = raw_card.get("prices")
+    price_nonfoil = prices.get("eur") if prices else None
+    price_foil = prices.get("eur_foil") if prices else None
+    if price_nonfoil:
+        price_rows.append({"finish": "nonfoil", "price_eur": price_nonfoil})
+    if price_foil:
+        price_rows.append({"finish": "foil", "price_eur": price_foil})
+
     # Returned structure
     return {
         "card": card,
-        "price_rows": price_rows,
         "dimensions": {
             "type_line": type_line,
             "mana_cost": mana_cost,
@@ -119,7 +114,6 @@ def transform_card(raw_card: dict) -> dict:
             "loyalty": loyalty,
             "set": set_dim,
             "rarity": rarity,
-            "card_back_id": card_back_id,
             "border_color": border_color,
             "frame":frame,
             "layout": layout
@@ -129,11 +123,10 @@ def transform_card(raw_card: dict) -> dict:
             "legalities": legalities,
             "keywords":raw_card.get("keywords") or [],
             "games":raw_card.get("games") or [],
-            "artists": artists
-            },
-        "card_faces": {
-            "card_faces": card_faces
-        }
+            "artists": artists,
+            "card_faces": card_faces,
+            "price_rows": price_rows
+            },      
     }
 
 def transform_core_card(raw_card: dict) -> dict:

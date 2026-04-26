@@ -26,6 +26,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-postgres:/docker-entrypoint-initdb.d:ro
 
 volumes:
   mongo_data:

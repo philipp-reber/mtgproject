@@ -6,9 +6,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+load_dotenv(PROJECT_ROOT / ".env")
 
 def get_env(name: str, default: str | None = None) -> str:
     # Standardizing Env variable behaviour and allowing standards
@@ -90,6 +90,7 @@ class PostgresConfig:
         return (
             f"postgresql://{self.username}:{self.password}"
             f"@{self.host}:{self.port}/{self.database}"
+            f"?sslmode=prefer"
         )
 
 @dataclass(frozen=True)
