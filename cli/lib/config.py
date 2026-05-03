@@ -1,3 +1,4 @@
+#config.py
 from __future__ import annotations # to make sure the decorator works as intended
 
 import os

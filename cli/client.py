@@ -1,10 +1,25 @@
+# client.py
 import argparse
 
+from lib.config import pipeline
 from lib.extract import check_status, download_data
-from lib.mongo import populate_raw_db, get_random_card, get_card_by_name
+from lib.mongo import (
+    populate_raw_db,
+    get_random_card,
+    get_card_by_name,
+    iter_raw_cards,
+    count_raw_cards,
+)
 from lib.pipeline import start_docker_containers
 from lib.transform import transform_card
-from lib.postgres import get_connection, load_transformed_card
+from lib.postgres import (
+    get_connection,
+    load_transformed_card,
+    load_transformed_cards,
+    truncate_sql_tables,
+)
+from lib.load import save_price_dataframe
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Magic Data and Pricing CLI")
@@ -19,6 +34,46 @@ def main() -> None:
     transform_parser.add_argument("cardname", type=str, nargs="?", default="", help="Cardname to transform")
 
     subparsers.add_parser("loadtestcard", help="Insert a random card into Postgres and query it")
+
+    import_parser = subparsers.add_parser(
+        "importsql",
+        help="Batch import all raw MongoDB cards into Postgres",
+    )
+    import_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=pipeline.batch_size,
+        help="Number of cards to transform and load per SQL batch",
+    )
+    import_parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Optional limit for testing. Use 0 for no limit.",
+    )
+    import_parser.add_argument(
+        "--truncate",
+        action="store_true",
+        help="Clear SQL tables before importing",
+    )
+
+    dataframe_parser = subparsers.add_parser(
+        "exportdf",
+        help="Export a machine-learning price dataframe from Postgres to Parquet",
+    )
+    dataframe_parser.add_argument(
+        "--output",
+        type=str,
+        default="",
+        help="Optional output path. Defaults to data/dataframe/card_price_dataframe.parquet",
+    )
+    dataframe_parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Optional row limit for testing. Use 0 for no limit.",
+    )
+
 
     args = parser.parse_args()
 
@@ -37,6 +92,52 @@ def main() -> None:
             else:
                 card = get_random_card()
             print(transform_card(card))
+
+        case "importsql":
+            if args.batch_size <= 0:
+                raise ValueError("--batch-size must be greater than 0")
+
+            limit = args.limit if args.limit > 0 else None
+            total = count_raw_cards(limit=limit)
+
+            print(f"Preparing SQL import for {total} cards...")
+            print(f"Batch size: {args.batch_size}")
+
+            conn = get_connection()
+
+            try:
+                if args.truncate:
+                    print("Truncating SQL tables before import...")
+                    truncate_sql_tables(conn) # Reset before fresh import
+
+                imported = 0
+                batch = []
+                # Batch-logic. Loads batch sized amount of cards from mongodb to memory, then to SQL and clears the batch
+                for raw_card in iter_raw_cards(
+                    batch_size=args.batch_size,
+                    limit=limit,
+                ):
+                    try:
+                        batch.append(transform_card(raw_card))
+                    except Exception as exc:
+                        raise RuntimeError(
+                            f"Failed to transform card "
+                            f"{raw_card.get('name')} ({raw_card.get('id')})"
+                        ) from exc
+
+                    if len(batch) >= args.batch_size:
+                        imported += load_transformed_cards(conn, batch)
+                        print(f"Imported {imported}/{total} cards")
+                        batch.clear()
+
+                if batch:
+                    imported += load_transformed_cards(conn, batch)
+                    print(f"Imported {imported}/{total} cards")
+
+                print("SQL import complete.")
+
+            finally:
+                conn.close()
 
         case "loadtestcard":
             # 1. Get random card from Mongo
@@ -79,6 +180,18 @@ def main() -> None:
 
             finally:
                 conn.close()
+        
+        case "exportdf":
+            limit = args.limit if args.limit > 0 else None
+            output_path = args.output if args.output else None
+
+            path, row_count = save_price_dataframe(
+                output_path=output_path,
+                limit=limit,
+            )
+
+            print(f"Saved dataframe with {row_count} rows to: {path}")
+
         case _:
             parser.print_help()
 

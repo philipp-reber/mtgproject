@@ -1,6 +1,8 @@
+# mongo.py
 import subprocess
 from pymongo import MongoClient
-
+from collections.abc import Iterator
+from typing import Any
 from .config import mongo, paths
 
 
@@ -80,3 +82,63 @@ def get_card_by_name(card_name:str) -> dict:
         raise ValueError(f"No card found with name: {card_name}")
 
     return result
+
+def iter_raw_cards(batch_size: int, limit: int | None = None) -> Iterator[dict[str, Any]]:
+    """
+    Connect to MongoDB
+    Open the raw card collection
+    Create a cursor over all card documents
+    Yield one raw card at a time
+    Close the cursor and MongoDB client when done
+
+    Usage: for raw_card in iter_raw_cards(batch_size=1000, limit=100): as it returns an iterable stream of cards one card at a time until it yielded 100 cards
+    """
+    client = MongoClient(
+        host=mongo.host,
+        port=mongo.port,
+        username=mongo.username,
+        password=mongo.password,
+        authSource=mongo.auth_source,
+        serverSelectionTimeoutMS=mongo.server_selection_timeout_ms,
+    )
+
+    db = client[mongo.database]
+    collection = db[mongo.collection]
+
+    cursor = collection.find({}, no_cursor_timeout=True).batch_size(batch_size)
+
+    if limit is not None:
+        cursor = cursor.limit(limit)
+
+    try:
+        for raw_card in cursor:
+            yield raw_card
+    finally:
+        cursor.close()
+        client.close()
+
+
+def count_raw_cards(limit: int | None = None) -> int:
+    """
+    Count raw cards in MongoDB. Used only for progress reporting.
+    """
+    client = MongoClient(
+        host=mongo.host,
+        port=mongo.port,
+        username=mongo.username,
+        password=mongo.password,
+        authSource=mongo.auth_source,
+        serverSelectionTimeoutMS=mongo.server_selection_timeout_ms,
+    )
+
+    try:
+        db = client[mongo.database]
+        collection = db[mongo.collection]
+        total = collection.count_documents({})
+
+        if limit is not None:
+            return min(total, limit)
+
+        return total
+    finally:
+        client.close()

@@ -129,3 +129,16 @@ CREATE TABLE IF NOT EXISTS bridge_card_prices (
     price_eur NUMERIC,
     UNIQUE (card_id, finish)
 );
+
+CREATE TABLE IF NOT EXISTS card_faces (
+    card_id TEXT REFERENCES fact_cards(card_id) ON DELETE CASCADE,
+    face_index INTEGER NOT NULL,
+    face_name TEXT,
+    face_mana_cost TEXT,
+    face_type_line TEXT,
+    face_oracle_text TEXT,
+    face_power TEXT,
+    face_toughness TEXT,
+    face_loyalty TEXT,
+    UNIQUE (card_id, face_index)
+);

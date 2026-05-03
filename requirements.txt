@@ -1,3 +1,5 @@
 pymongo
 requests
 psycopg2
+pandas
+pyarrow

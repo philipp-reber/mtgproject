@@ -1,3 +1,4 @@
+# transform.py
 # Utility Functions to transform the Data from the raw MongoDB and make it SQL ready
 # raw_card -> transform_card(raw_card) -> structured payload -> postgres.py inserts it
 
@@ -74,22 +75,21 @@ def transform_card(raw_card: dict) -> dict:
             "legality":legality
         })
 
-    card_faces = {
-        "card_faces": []
-    }
+    card_faces = []
 
-    if layout["layout"] in ["split", "flip", "transform", "double_faced_token"]:
-        for face in raw_card.get("card_faces", {}):
-            card_face = {
+    for face_index, face in enumerate(raw_card.get("card_faces") or []):
+        card_faces.append(
+            {
+                "face_index": face_index,
                 "face_name": face.get("name"),
                 "face_mana_cost": face.get("mana_cost"),
                 "face_type_line": face.get("type_line"),
                 "face_oracle_text": face.get("oracle_text"),
                 "face_power": face.get("power"),
                 "face_toughness": face.get("toughness"),
-                "face_loyalty": face.get("loyalty")
+                "face_loyalty": face.get("loyalty"),
             }
-            card_faces["card_faces"].append(card_face)
+        )
 
     price_rows = []
     prices = raw_card.get("prices")
@@ -128,24 +128,3 @@ def transform_card(raw_card: dict) -> dict:
             "price_rows": price_rows
             },      
     }
-
-def transform_core_card(raw_card: dict) -> dict:
-    ...
-
-def transform_dimensions(raw_card: dict) -> dict:
-    ...
-
-def transform_bridges(raw_card: dict) -> dict:
-    ...
-
-def clean_str(value):
-    ...
-
-def clean_int(value):
-    ...
-
-def clean_bool(value):
-    ...
-
-def clean_list(value):
-    ...
