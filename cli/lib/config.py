@@ -49,6 +49,7 @@ class PathConfig:
     raw_meta_path: Path
     docker_dir: Path
     docker_compose_path: Path
+    dataframe_path: Path
 
 
 @dataclass(frozen=True)
@@ -108,6 +109,7 @@ paths = PathConfig(
     raw_meta_path=PROJECT_ROOT / "data" / "raw" / "scryfall_all_cards.meta.json",
     docker_dir=PROJECT_ROOT / "docker",
     docker_compose_path=PROJECT_ROOT / "docker" / "docker-compose.yml",
+    dataframe_path = PROJECT_ROOT / "data" / "dataframe" / "card_price_dataframe.parquet",
 )
 
 scryfall = ScryfallConfig(

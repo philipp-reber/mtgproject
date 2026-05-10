@@ -187,7 +187,6 @@ def main() -> None:
 
             path, row_count = save_price_dataframe(
                 output_path=output_path,
-                limit=limit,
             )
 
             print(f"Saved dataframe with {row_count} rows to: {path}")

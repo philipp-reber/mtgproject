@@ -19,6 +19,21 @@ def get_connection():
         dbname=postgres.database,
     )
 
+def count_sql_cards(conn) -> int:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT COUNT(card_id)
+            FROM fact_cards;
+            """
+        )
+
+        result = cur.fetchone()
+
+        if result is None:
+            return 0
+
+        return result[0]
 
 def get_or_create_dimension(cur, table_name: str, column_name: str, value):
     '''Insert this dimension value if it doesn't exist yet, otherwise reuse the existing one and always give me its id'''

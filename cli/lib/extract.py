@@ -4,9 +4,12 @@ import json
 from datetime import datetime
 
 import requests
+import psycopg2
+import pandas as pd
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
-
+from .mongo import get_random_card
+from .postgres import get_connection, count_sql_cards
 from .config import mongo, paths, scryfall
 
 
@@ -61,13 +64,32 @@ def check_status() -> None:
     print("Checking raw database for contents...")
 
     db = client[mongo.database]
-    card = db[mongo.collection].find_one({}, {"name": 1})
+    collection = db[mongo.collection]
+    card_count_mongo = collection.count_documents({})
+    card = get_random_card()
 
     if card:
-        print(f"Found a card in the database: {card}")
+        print(f"Found {card_count_mongo} cards in the Mongo database, here is a random card object: {card}")
     else:
         print("The database is empty. Populate it with: populateraw")
 
+    print("Checking SQL for contents...")
+
+    conn = get_connection()
+
+    try:
+        card_count_sql = count_sql_cards(conn)
+        print(f"Found {card_count_sql} cards in the SQL database.")
+    finally:
+        conn.close()
+
+    print("Checking Raw DataFrame for contents...")
+
+    try:
+        df = pd.read_parquet(paths.dataframe_path)
+        print(df.head())
+    except Exception as e:
+        print(f"Failed to load dataframe: {e}")
 
 def download_data() -> None:
     paths.raw_meta_path.parent.mkdir(parents=True, exist_ok=True)

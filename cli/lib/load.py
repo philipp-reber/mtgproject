@@ -1,5 +1,5 @@
 # load.py
-# Utility functions to Load and prepare data for Machine Learning from SQL BDV
+# Utility function to Load data for Machine Learning from SQL BDV
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,21 +9,11 @@ import pandas as pd
 from .config import paths
 from .postgres import get_connection
 
-
-DEFAULT_DATAFRAME_PATH = paths.data_dir / "dataframe" / "card_price_dataframe.parquet"
-
-
 PRICE_DATAFRAME_SQL = """
 WITH colors AS (
     SELECT
         card_id,
-        array_to_string(array_agg(DISTINCT color ORDER BY color), '|') AS colors,
-        COUNT(DISTINCT color)::INTEGER AS color_count,
-        BOOL_OR(color = 'W') AS has_white,
-        BOOL_OR(color = 'U') AS has_blue,
-        BOOL_OR(color = 'B') AS has_black,
-        BOOL_OR(color = 'R') AS has_red,
-        BOOL_OR(color = 'G') AS has_green
+        array_agg(DISTINCT color ORDER BY color) AS colors
     FROM bridge_card_colors
     GROUP BY card_id
 ),
@@ -31,8 +21,7 @@ WITH colors AS (
 keywords AS (
     SELECT
         card_id,
-        array_to_string(array_agg(DISTINCT keyword ORDER BY keyword), '|') AS keywords,
-        COUNT(DISTINCT keyword)::INTEGER AS keyword_count
+        array_agg(DISTINCT keyword ORDER BY keyword) AS keywords
     FROM bridge_card_keywords
     GROUP BY card_id
 ),
@@ -40,11 +29,7 @@ keywords AS (
 games AS (
     SELECT
         card_id,
-        array_to_string(array_agg(DISTINCT game ORDER BY game), '|') AS games,
-        COUNT(DISTINCT game)::INTEGER AS game_count,
-        BOOL_OR(game = 'paper') AS has_game_paper,
-        BOOL_OR(game = 'arena') AS has_game_arena,
-        BOOL_OR(game = 'mtgo') AS has_game_mtgo
+        array_agg(DISTINCT game ORDER BY game) AS games
     FROM bridge_card_games
     GROUP BY card_id
 ),
@@ -52,8 +37,7 @@ games AS (
 artists AS (
     SELECT
         card_id,
-        array_to_string(array_agg(DISTINCT artist ORDER BY artist), '|') AS artists,
-        COUNT(DISTINCT artist)::INTEGER AS artist_count
+        array_agg(DISTINCT artist ORDER BY artist) AS artists
     FROM bridge_card_artists
     GROUP BY card_id
 ),
@@ -61,51 +45,38 @@ artists AS (
 legalities AS (
     SELECT
         card_id,
-        jsonb_object_agg(format_name, legality ORDER BY format_name)::TEXT AS legalities_json,
 
-        COUNT(*) FILTER (WHERE legality = 'legal')::INTEGER AS legal_format_count,
-        COUNT(*) FILTER (WHERE legality = 'not_legal')::INTEGER AS not_legal_format_count,
-        COUNT(*) FILTER (WHERE legality = 'banned')::INTEGER AS banned_format_count,
-        COUNT(*) FILTER (WHERE legality = 'restricted')::INTEGER AS restricted_format_count,
+        MAX(CASE WHEN format_name = 'standard' THEN legality END) AS standard_legal,
+        MAX(CASE WHEN format_name = 'future' THEN legality END) AS future_legal,
+        MAX(CASE WHEN format_name = 'historic' THEN legality END) AS historic_legal,
+        MAX(CASE WHEN format_name = 'timeless' THEN legality END) AS timeless_legal,
+        MAX(CASE WHEN format_name = 'gladiator' THEN legality END) AS gladiator_legal,
+        MAX(CASE WHEN format_name = 'pioneer' THEN legality END) AS pioneer_legal,
+        MAX(CASE WHEN format_name = 'explorer' THEN legality END) AS explorer_legal,
+        MAX(CASE WHEN format_name = 'modern' THEN legality END) AS modern_legal,
+        MAX(CASE WHEN format_name = 'legacy' THEN legality END) AS legacy_legal,
+        MAX(CASE WHEN format_name = 'pauper' THEN legality END) AS pauper_legal,
+        MAX(CASE WHEN format_name = 'vintage' THEN legality END) AS vintage_legal,
+        MAX(CASE WHEN format_name = 'penny' THEN legality END) AS penny_legal,
+        MAX(CASE WHEN format_name = 'commander' THEN legality END) AS commander_legal,
+        MAX(CASE WHEN format_name = 'oathbreaker' THEN legality END) AS oathbreaker_legal,
+        MAX(CASE WHEN format_name = 'standardbrawl' THEN legality END) AS standardbrawl_legal,
+        MAX(CASE WHEN format_name = 'brawl' THEN legality END) AS brawl_legal,
+        MAX(CASE WHEN format_name = 'alchemy' THEN legality END) AS alchemy_legal,
+        MAX(CASE WHEN format_name = 'paupercommander' THEN legality END) AS paupercommander_legal,
+        MAX(CASE WHEN format_name = 'duel' THEN legality END) AS duel_legal,
+        MAX(CASE WHEN format_name = 'oldschool' THEN legality END) AS oldschool_legal,
+        MAX(CASE WHEN format_name = 'premodern' THEN legality END) AS premodern_legal,
+        MAX(CASE WHEN format_name = 'predh' THEN legality END) AS predh_legal
 
-        MAX(CASE WHEN format_name = 'standard' THEN legality END) AS legality_standard,
-        MAX(CASE WHEN format_name = 'pioneer' THEN legality END) AS legality_pioneer,
-        MAX(CASE WHEN format_name = 'modern' THEN legality END) AS legality_modern,
-        MAX(CASE WHEN format_name = 'legacy' THEN legality END) AS legality_legacy,
-        MAX(CASE WHEN format_name = 'vintage' THEN legality END) AS legality_vintage,
-        MAX(CASE WHEN format_name = 'commander' THEN legality END) AS legality_commander,
-        MAX(CASE WHEN format_name = 'pauper' THEN legality END) AS legality_pauper,
-        MAX(CASE WHEN format_name = 'brawl' THEN legality END) AS legality_brawl,
-        MAX(CASE WHEN format_name = 'historic' THEN legality END) AS legality_historic
     FROM bridge_card_legalities
-    GROUP BY card_id
-),
-
-faces AS (
-    SELECT
-        card_id,
-        COUNT(*)::INTEGER AS face_count,
-        jsonb_agg(
-            jsonb_build_object(
-                'face_index', face_index,
-                'face_name', face_name,
-                'face_mana_cost', face_mana_cost,
-                'face_type_line', face_type_line,
-                'face_oracle_text', face_oracle_text,
-                'face_power', face_power,
-                'face_toughness', face_toughness,
-                'face_loyalty', face_loyalty
-            )
-            ORDER BY face_index
-        )::TEXT AS card_faces_json
-    FROM card_faces
     GROUP BY card_id
 )
 
 SELECT
     fc.card_id,
     bp.finish,
-    bp.price_eur::DOUBLE PRECISION AS target_price_eur,
+    bp.price_eur AS target_price_eur,
 
     fc.card_name,
     fc.reserved,
@@ -133,44 +104,33 @@ SELECT
     dframe.frame,
     dlay.layout,
 
-    COALESCE(colors.colors, '') AS colors,
-    COALESCE(colors.color_count, 0) AS color_count,
-    COALESCE(colors.has_white, FALSE) AS has_white,
-    COALESCE(colors.has_blue, FALSE) AS has_blue,
-    COALESCE(colors.has_black, FALSE) AS has_black,
-    COALESCE(colors.has_red, FALSE) AS has_red,
-    COALESCE(colors.has_green, FALSE) AS has_green,
+    colors.colors,
+    keywords.keywords,
+    games.games,
+    artists.artists,
 
-    COALESCE(keywords.keywords, '') AS keywords,
-    COALESCE(keywords.keyword_count, 0) AS keyword_count,
-
-    COALESCE(games.games, '') AS games,
-    COALESCE(games.game_count, 0) AS game_count,
-    COALESCE(games.has_game_paper, FALSE) AS has_game_paper,
-    COALESCE(games.has_game_arena, FALSE) AS has_game_arena,
-    COALESCE(games.has_game_mtgo, FALSE) AS has_game_mtgo,
-
-    COALESCE(artists.artists, '') AS artists,
-    COALESCE(artists.artist_count, 0) AS artist_count,
-
-    COALESCE(legalities.legalities_json, '{}') AS legalities_json,
-    COALESCE(legalities.legal_format_count, 0) AS legal_format_count,
-    COALESCE(legalities.not_legal_format_count, 0) AS not_legal_format_count,
-    COALESCE(legalities.banned_format_count, 0) AS banned_format_count,
-    COALESCE(legalities.restricted_format_count, 0) AS restricted_format_count,
-
-    COALESCE(legalities.legality_standard, 'unknown') AS legality_standard,
-    COALESCE(legalities.legality_pioneer, 'unknown') AS legality_pioneer,
-    COALESCE(legalities.legality_modern, 'unknown') AS legality_modern,
-    COALESCE(legalities.legality_legacy, 'unknown') AS legality_legacy,
-    COALESCE(legalities.legality_vintage, 'unknown') AS legality_vintage,
-    COALESCE(legalities.legality_commander, 'unknown') AS legality_commander,
-    COALESCE(legalities.legality_pauper, 'unknown') AS legality_pauper,
-    COALESCE(legalities.legality_brawl, 'unknown') AS legality_brawl,
-    COALESCE(legalities.legality_historic, 'unknown') AS legality_historic,
-
-    COALESCE(faces.face_count, 0) AS face_count,
-    COALESCE(faces.card_faces_json, '[]') AS card_faces_json
+    legalities.standard_legal,
+    legalities.future_legal,
+    legalities.historic_legal,
+    legalities.timeless_legal,
+    legalities.gladiator_legal,
+    legalities.pioneer_legal,
+    legalities.explorer_legal,
+    legalities.modern_legal,
+    legalities.legacy_legal,
+    legalities.pauper_legal,
+    legalities.vintage_legal,
+    legalities.penny_legal,
+    legalities.commander_legal,
+    legalities.oathbreaker_legal,
+    legalities.standardbrawl_legal,
+    legalities.brawl_legal,
+    legalities.alchemy_legal,
+    legalities.paupercommander_legal,
+    legalities.duel_legal,
+    legalities.oldschool_legal,
+    legalities.premodern_legal,
+    legalities.predh_legal
 
 FROM bridge_card_prices AS bp
 
@@ -231,124 +191,15 @@ LEFT JOIN artists
 LEFT JOIN legalities
     ON legalities.card_id = fc.card_id
 
-LEFT JOIN faces
-    ON faces.card_id = fc.card_id
-
 WHERE bp.price_eur IS NOT NULL
 
 ORDER BY fc.card_id, bp.finish
 """
 
 
-def _postprocess_price_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def load_price_dataframe() -> pd.DataFrame:
     """
-    Apply light dataframe cleanup after loading from SQL.
-
-    This does not do full ML feature engineering yet.
-    It only makes the exported dataframe cleaner and easier to use later.
-    """
-    if df.empty:
-        return df
-
-    df = df.copy()
-
-    df["target_price_eur"] = pd.to_numeric(
-        df["target_price_eur"],
-        errors="coerce",
-    )
-
-    df = df.dropna(subset=["target_price_eur"]).copy()
-
-    if "release_date" in df.columns:
-        df["release_date"] = pd.to_datetime(
-            df["release_date"],
-            errors="coerce",
-        )
-
-        df["release_year"] = df["release_date"].dt.year.astype("Int64")
-        df["release_month"] = df["release_date"].dt.month.astype("Int64")
-
-    bool_columns = [
-        "reserved",
-        "booster",
-        "digital",
-        "reprint",
-        "full_art",
-        "textless",
-        "has_white",
-        "has_blue",
-        "has_black",
-        "has_red",
-        "has_green",
-        "has_game_paper",
-        "has_game_arena",
-        "has_game_mtgo",
-    ]
-
-    for column in bool_columns:
-        if column in df.columns:
-            df[column] = df[column].fillna(False).astype(bool)
-
-    count_columns = [
-        "color_count",
-        "keyword_count",
-        "game_count",
-        "artist_count",
-        "legal_format_count",
-        "not_legal_format_count",
-        "banned_format_count",
-        "restricted_format_count",
-        "face_count",
-    ]
-
-    for column in count_columns:
-        if column in df.columns:
-            df[column] = df[column].fillna(0).astype("Int64")
-
-    text_columns = [
-        "finish",
-        "card_name",
-        "type_line",
-        "mana_cost",
-        "language",
-        "oracle_text",
-        "power",
-        "toughness",
-        "loyalty",
-        "set_code",
-        "set_name",
-        "set_type",
-        "rarity",
-        "border_color",
-        "frame",
-        "layout",
-        "colors",
-        "keywords",
-        "games",
-        "artists",
-        "legalities_json",
-        "legality_standard",
-        "legality_pioneer",
-        "legality_modern",
-        "legality_legacy",
-        "legality_vintage",
-        "legality_commander",
-        "legality_pauper",
-        "legality_brawl",
-        "legality_historic",
-        "card_faces_json",
-    ]
-
-    for column in text_columns:
-        if column in df.columns:
-            df[column] = df[column].fillna("")
-
-    return df
-
-
-def load_price_dataframe(limit: int | None = None) -> pd.DataFrame:
-    """
-    Load a machine-learning-oriented price dataframe from Postgres.
+    Load a dataframe from Postgres.
 
     Row grain:
         one row per card_id + finish price
@@ -358,10 +209,6 @@ def load_price_dataframe(limit: int | None = None) -> pd.DataFrame:
     """
     sql_query = PRICE_DATAFRAME_SQL
     params = None
-
-    if limit is not None:
-        sql_query = f"{sql_query}\nLIMIT %(limit)s"
-        params = {"limit": limit}
 
     conn = get_connection()
 
@@ -374,23 +221,22 @@ def load_price_dataframe(limit: int | None = None) -> pd.DataFrame:
     finally:
         conn.close()
 
-    return _postprocess_price_dataframe(df)
+    return df
 
 
 def save_price_dataframe(
     output_path: str | Path | None = None,
-    limit: int | None = None,
 ) -> tuple[Path, int]:
     """
-    Load the ML price dataframe from Postgres and save it as a Parquet file.
+    Load the dataframe from Postgres and save it as a Parquet file.
     """
     if output_path is None:
-        output_path = DEFAULT_DATAFRAME_PATH
+        output_path = paths.dataframe_path
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    df = load_price_dataframe(limit=limit)
+    df = load_price_dataframe()
 
     if df.empty:
         raise ValueError("The price dataframe is empty. Check whether SQL price data exists.")
@@ -400,5 +246,5 @@ def save_price_dataframe(
         index=False,
         engine="pyarrow",
     )
-
+        
     return output_path, len(df)
