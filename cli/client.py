@@ -19,7 +19,7 @@ from lib.postgres import (
     truncate_sql_tables,
 )
 from lib.load import save_price_dataframe
-
+from lib.ml_pipeline import build_model, predict_card_price
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Magic Data and Pricing CLI")
@@ -73,6 +73,42 @@ def main() -> None:
         default=0,
         help="Optional row limit for testing. Use 0 for no limit.",
     )
+
+    ml_pipeline_parser = subparsers.add_parser(
+        "build_ml_model",
+        help="Builds the standard ML Model, evaluates it and saves it"
+    )
+
+    predict_parser = subparsers.add_parser(
+        "predictprice",
+        help="Predict a card price from manually entered features",
+    )
+
+    predict_parser.add_argument("--finish", default="nonfoil")
+    predict_parser.add_argument("--language", default="en")
+    predict_parser.add_argument("--set-type", default="expansion")
+    predict_parser.add_argument("--rarity", default="rare")
+    predict_parser.add_argument("--border-color", default="black")
+    predict_parser.add_argument("--frame", default="2015")
+    predict_parser.add_argument("--layout", default="normal")
+    predict_parser.add_argument("--colors", default="")
+    predict_parser.add_argument("--games", default="paper")
+    predict_parser.add_argument("--power", default="")
+    predict_parser.add_argument("--toughness", default="")
+    predict_parser.add_argument("--loyalty", default="")
+    predict_parser.add_argument("--edhrec-rank", type=int, default=None)
+    predict_parser.add_argument("--penny-rank", type=int, default=None)
+
+    predict_parser.add_argument("--reserved", action="store_true")
+    predict_parser.add_argument("--booster", action="store_true")
+    predict_parser.add_argument("--digital", action="store_true")
+    predict_parser.add_argument("--reprint", action="store_true")
+    predict_parser.add_argument("--full-art", action="store_true")
+    predict_parser.add_argument("--textless", action="store_true")
+
+    predict_parser.add_argument("--modern-legal", default="not_legal")
+    predict_parser.add_argument("--commander-legal", default="not_legal")
+    predict_parser.add_argument("--legacy-legal", default="not_legal")
 
 
     args = parser.parse_args()
@@ -190,6 +226,44 @@ def main() -> None:
             )
 
             print(f"Saved dataframe with {row_count} rows to: {path}")
+
+        case "build_ml_model":
+            build_model()
+
+
+        case "predictprice":
+            colors = [color for color in args.colors.split(",") if color]
+            games = [game for game in args.games.split(",") if game]
+
+            card_features = {
+                "finish": args.finish,
+                "language": args.language,
+                "set_type": args.set_type,
+                "rarity": args.rarity,
+                "border_color": args.border_color,
+                "frame": args.frame,
+                "layout": args.layout,
+                "colors": colors,
+                "games": games,
+                "power": args.power or None,
+                "toughness": args.toughness or None,
+                "loyalty": args.loyalty or None,
+                "edhrec_rank": args.edhrec_rank,
+                "penny_rank": args.penny_rank,
+                "reserved": args.reserved,
+                "booster": args.booster,
+                "digital": args.digital,
+                "reprint": args.reprint,
+                "full_art": args.full_art,
+                "textless": args.textless,
+                "modern_legal": args.modern_legal,
+                "commander_legal": args.commander_legal,
+                "legacy_legal": args.legacy_legal,
+            }
+
+            predicted_price = predict_card_price(card_features)
+
+            print(f"Predicted price: {predicted_price:.2f} EUR")
 
         case _:
             parser.print_help()

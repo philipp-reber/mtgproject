@@ -50,6 +50,7 @@ class PathConfig:
     docker_dir: Path
     docker_compose_path: Path
     dataframe_path: Path
+    model_dir: Path
 
 
 @dataclass(frozen=True)
@@ -110,6 +111,7 @@ paths = PathConfig(
     docker_dir=PROJECT_ROOT / "docker",
     docker_compose_path=PROJECT_ROOT / "docker" / "docker-compose.yml",
     dataframe_path = PROJECT_ROOT / "data" / "dataframe" / "card_price_dataframe.parquet",
+    model_dir=PROJECT_ROOT / "model",
 )
 
 scryfall = ScryfallConfig(
