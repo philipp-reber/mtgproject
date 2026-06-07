@@ -1,7 +1,5 @@
 # load.py
 # Utility function to Load data for Machine Learning from SQL BDV
-from __future__ import annotations
-
 from pathlib import Path
 
 import pandas as pd
